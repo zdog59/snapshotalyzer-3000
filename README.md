@@ -14,4 +14,7 @@ shotty ises the configuration file created by the AWS cli. e.e
 
 ## Running
 
-`pipenv run python shotty/shotty.py`
+`pipenv run python shotty/shotty.py <command> <--project=PROJECT>`
+
+*command* is list, start, stop
+*project* is opotional
