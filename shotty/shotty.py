@@ -8,6 +8,7 @@ ec2 = session.resource('ec2')
 def list_instances():
     "List EC2 instances" #Python doc string
     for i in ec2.instances.all():
+        print(i)
         print(', '.join((
             i.id,
             i.instance_type,
