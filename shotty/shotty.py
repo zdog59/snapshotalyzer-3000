@@ -1,4 +1,5 @@
 import boto3
+import botocore
 import click
 
 session = boto3.Session(profile_name='shotty')
@@ -8,10 +9,12 @@ def filter_instances(project):
     instances = []
 
     if project:
-        filters = [{'Name':'tag:Project', 'Values':[project]}]
+        filters = [{'Name':'tag:Project', 'Values':[project]},{'Name': 'instance-state-name', 'Values': ['running','stopped']}]
         instances = ec2.instances.filter(Filters=filters)
     else:
-        instances = ec2.instances.all()
+        filters = [{'Name': 'instance-state-name', 'Values': ['running','stopped']}]
+        instances = ec2.instances.filter(Filters=filters)
+        #instances = ec2.instances.all()
     return instances
 
 @click.group()
@@ -80,10 +83,19 @@ def create_snapshots(project):
     instances = filter_instances(project)
 
     for i in instances:
+        print("Stopping...{0}".format(i.id))
         i.stop()
+        i.wait_until_stopped()
         for v in i.volumes.all():
             print("Creating snapshot of {0}".format(v.id))
-            v.create_snapshot(Description="Created by SnapshjotAlyzer 3000")
+            v.create_snapshot(Description="Created by SnapshotAlyzer 3000")
+
+        print("Starting...{0}".format(i.id))
+
+        i.start()
+        i.wait_until_running() 
+    print("Job's done")
+
     return         
 
 
@@ -117,8 +129,12 @@ def stop_instances(project):
     instances = filter_instances(project)
 
     for i in instances:
-            print("Stopping {0}...".format(i.id))    
-            i.stop()
+            print("Stopping {0}...".format(i.id))  
+            try:  
+                i.stop()
+            except botocore.exceptions.ClientError as e:
+                print(" Could not start {0}".format(i.id) + str(e))
+                continue
     return
 
 @instances.command('start')
@@ -129,8 +145,15 @@ def start_instances(project):
     instances = filter_instances(project)
 
     for i in instances:
-            print("Starting {0}...".format(i.id))    
-            i.start()
+            #if i.state['Name'] == "stopped":
+            print("Starting {0}...".format(i.id))
+            try:
+                i.start()
+            except botocore.exceptions.ClientError as e:
+                print(" Could not start {0}".format(i.id) + str(e))
+                continue    
+            #else:
+               #print("Unable to start. Instance {0} is in the following state: {1}...".format(i.id, i.state['Name']))     
     return         
 
 
